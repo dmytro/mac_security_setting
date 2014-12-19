@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+PATH="/bin:/usr/bin:/sbin:/usr/sbin"
 #
 #
 # Configure Screen saver to 15 mins - PCI DSS requirement
@@ -11,3 +12,12 @@ defaults write com.apple.screensaver askForPasswordDelay -int 0
 
 # Empty Trash securely by default
 defaults write com.apple.finder EmptyTrashSecurely -bool true
+
+#
+# Global password policies
+#
+# See pwpolicy(8)
+#
+# 24 * 60 * 90 = 129600 minutes
+pwpolicy -a authenticator -setglobalpolicy \
+         "minChars=7 maxFailedLoginAttempts=3 requiresNumeric=1 requiresAlpha=1 usingHistory=4 maxFailedLoginAttempts=6 maxMinutesUntilChangePassword=129600"
