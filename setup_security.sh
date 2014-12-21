@@ -185,7 +185,7 @@ Please keep this record safe.
 ================================================================
 EOF
 
-    cat <<'EOF'
+    cat <<EOF
   ======================================================================
   =
   =  User's ${USER_NAME} password saved to the file
@@ -198,12 +198,13 @@ EOF
 
 EOF
 
-#    echo $msg; exit
 
-    open -e --fresh ${OUTPUT}
     osascript <<EOF
+set currentApp to (path to frontmost application as text)
+
 tell application "TextEdit"
 activate
+open "${OUTPUT}"
 display  dialog "
 
 User's ${USER_NAME} password saved to the file ${OUTPUT}. Before continuing please print out the file on the next print dialog.
@@ -213,6 +214,10 @@ Keep printout in the safe place.
 " buttons "OK" default button 1 with icon caution
 
 print "${OUTPUT}" print dialog "true"
+end tell
+
+tell application currentApp
+activate
 end tell
 
 EOF
