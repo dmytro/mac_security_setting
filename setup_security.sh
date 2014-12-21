@@ -14,9 +14,11 @@ maxMinutesUntilChangePassword=$((maxDays * 24 * 60))
 idleTime_minutes=15
 idleTime=$((idleTime_minutes  * 60 ))
 
+DONT_DELETE_PASSWORD_FILE=0 # Set this to 1 if you want to keep generated file on disk
 #
 # There is no user configurable parts below this line
 ##################################################################
+
 set -e
 
 #
@@ -24,7 +26,7 @@ set -e
 # 0 - all OK
 # 1 - user already exists
 # 2 - could not generate password
-#
+# 3 - admin user name is not configured
 
 # Run this at the very begining just to make sure user has sudo
 # permissions.
@@ -82,12 +84,10 @@ random_password() {
 
 guard(){
     local TARGETUSER=${1}
+    test -z ${TARGETUSER} && { echo "Admin user name is not set."; exit 3; }
 
-    if dscl . -list /Users | grep ${TARGETUSER} > /dev/null
-    then
-        echo "User ${TARGETUSER} already exists."
-        exit 1
-    fi
+    dscl . -read /Users/${TARGETUSER} > /dev/null 2>&1 && \
+        { echo "User ${TARGETUSER} already exists.";  exit 1; } || true
 }
 
 make_admin_user(){
@@ -110,7 +110,7 @@ echo "-- Creating admin user "
     sudo dscl . -create /Users/${TARGETUSER} UniqueID         ${newid}
     printf '.'
     sudo dscl . -create /Users/${TARGETUSER} PrimaryGroupID   ${GID}
-    printf '.'
+    printf '.' #5
     sudo dscl . -create /Users/${TARGETUSER} NFSHomeDirectory /Users/${TARGETUSER}
     printf '.'
 
@@ -170,6 +170,8 @@ print_policy() {
 }
 save_password() {
     local OUTPUT="${HOME}/admin_user_password.txt"
+
+    rm -f ${OUTPUT}
     cat <<EOF > ${OUTPUT}
 ================================================================
 
@@ -179,6 +181,8 @@ user '${USER_NAME}' on
 computer "$(computer_name)" at $(date "+%Y %m %d %H:%M")
 
 ${USER_NAME}'s password: ${PASSWORD}
+
+Current user: $(whoami)
 
 Please keep this record safe.
 
@@ -221,6 +225,8 @@ activate
 end tell
 
 EOF
+
+    test ${DONT_DELETE_PASSWORD_FILE} = 1 || rm -f ${OUTPUT}
 
  }
 
