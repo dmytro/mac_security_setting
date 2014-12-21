@@ -5,6 +5,15 @@ PATH="/bin:/usr/bin:/sbin:/usr/sbin"
 # Configuration
 #
 USER_NAME="Coiney"
+minChars=7
+usingHistory=4
+maxFailedLoginAttempts=6
+maxDays=90
+maxMinutesUntilChangePassword=$((maxDays * 24 * 60))
+
+idleTime_minutes=15
+idleTime=$((idleTime_minutes  * 60 ))
+
 #
 # There is no user configurable parts below this line
 ##################################################################
@@ -23,24 +32,24 @@ cache_sudo() {
     cat <<EOF
 
 
-This  script will  modify several  security related  settings on  this
-computer:
+   *** THIS SCRIPT WILL MODIFY SEVERAL SECURITY RELATED ***
+   ***           SETTINGS ON THIS COMPUTER:             ***
 
 * Create administrator user ${USER_NAME};
 * Update your password policies:
-  - password expiration time set to 90 days;
-  - account lock after 6 failed login attempts;
-  - min password length 7 characters;
-* Configure screensaver start time (15 minutes);
-* Requrie paccword to unlock screensaver screen.
+  - password expiration time set to ${maxDays} days;
+  - account lock after ${maxFailedLoginAttempts} failed login attempts;
+  - min password length ${minChars} characters;
+* Configure screen saver start time (${idleTime_minutes} minutes);
+* Require password to unlock the screen saver screen.
 
-After  scripts completed  do  not forget  to  print out  administrator
-password file (it will open in TextEdit for you by script).
+After scripts completed do not forget to print out administrator
+password file (it will open in TextEdit for you by the script).
 
 >>>
 
 This script uses sudo to create user account and to modify system setting.
-Please provide your sudo password.
+Please provide your sudo password at the prompt below.
 
 
 EOF
@@ -109,7 +118,7 @@ set_pw_policy(){
     echo "-- Setting default password policies"
 
     sudo pwpolicy -setglobalpolicy \
-         "minChars=7 requiresNumeric=1 requiresAlpha=1 usingHistory=4 maxFailedLoginAttempts=6 maxMinutesUntilChangePassword=129600"
+         "minChars=${minChars} requiresNumeric=1 requiresAlpha=1 usingHistory=${usingHistory} maxFailedLoginAttempts=${maxFailedLoginAttempts} maxMinutesUntilChangePassword=${maxMinutesUntilChangePassword}"
 
 }
 
@@ -182,7 +191,7 @@ change_user_password(){
 # START MAIN
 #
 
-guard ${USER_NAME}
+#guard ${USER_NAME}
 cache_sudo
 
 PASSWORD=$(random_password)
