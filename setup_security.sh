@@ -64,13 +64,8 @@ EOF
     osascript <<EOF
 set currentApp to (path to frontmost application as text)
 
-tell application "System Events"
-display alert "${ALERT}" message "${MESSAGE}" buttons "OK" default button 1
-end tell
-
-tell application currentApp
-activate
-end tell
+tell application "System Events" to display alert "${ALERT}" message "${MESSAGE}" as critical  buttons "OK" default button 1
+tell application currentApp to activate
 
 EOF
 
@@ -220,9 +215,7 @@ Keep printout in the safe place.
 print "${OUTPUT}" print dialog "true"
 end tell
 
-tell application currentApp
-activate
-end tell
+tell application currentApp to activate
 
 EOF
 
