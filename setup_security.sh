@@ -29,12 +29,16 @@ set -e
 # Run this at the very begining just to make sure user has sudo
 # permissions.
 cache_sudo() {
-    cat <<EOF
 
+    local ALERT=$(cat <<EOF
 
-   *** THIS SCRIPT WILL MODIFY SEVERAL SECURITY RELATED ***
-   ***           SETTINGS ON THIS COMPUTER:             ***
+THIS SCRIPT WILL MODIFY SEVERAL SECURITY RELATED SETTINGS ON THIS
+COMPUTER:
 
+EOF
+)
+
+    local MESSAGE=$(cat <<EOF
 * Create administrator user ${USER_NAME};
 * Update your password policies:
   - password expiration time set to ${maxDays} days;
@@ -43,16 +47,29 @@ cache_sudo() {
 * Configure screen saver start time (${idleTime_minutes} minutes);
 * Require password to unlock the screen saver screen.
 
-After scripts completed do not forget to print out administrator
-password file (it will open in TextEdit for you by the script).
+After scripts completed do not forget to print out administrator password file (it will open in TextEdit for you by the script).
 
 >>>
 
-This script uses sudo to create user account and to modify system setting.
-Please provide your sudo password at the prompt below.
-
+This script uses sudo to create user account and to modify system setting. Please provide your sudo password at the prompt below.
 
 EOF
+          )
+
+    echo -e "${ALERT} \n\n ${MESSAGE}"
+    osascript <<EOF
+set currentApp to (path to frontmost application as text)
+
+tell application "System Events"
+display alert "${ALERT}" message "${MESSAGE}" buttons "OK" default button 1
+end tell
+
+tell application currentApp
+activate
+end tell
+
+EOF
+
     sudo -k
     sudo -l > /dev/null 2>&1
 }
@@ -149,7 +166,6 @@ print_policy() {
     printf "Your effective password policies are:\n\n\n"
     pwpolicy get-effective-policy  -u $(whoami)
 }
-
 save_password() {
     local OUTPUT="${HOME}/admin_user_password.txt"
     cat <<EOF > ${OUTPUT}
@@ -167,21 +183,39 @@ Please keep this record safe.
 ================================================================
 EOF
 
-    cat <<EOF
-
-  **********************************************************************
-  *
-  *  User's ${USER_NAME} password saved to the file
-  *
-  * ${OUTPUT}
-  *
-  * Please print out and delete this file. Keep it in safe place.
-  *
-  **********************************************************************
+    cat <<'EOF'
+  ======================================================================
+  =
+  =  User's ${USER_NAME} password saved to the file
+  =
+  = ${OUTPUT}
+  =
+  = Please print out and delete this file. Keep it in safe place.
+  =
+  ======================================================================
 
 EOF
-    open -e --background --fresh ${OUTPUT}
-}
+
+#    echo $msg; exit
+
+    open -e --fresh ${OUTPUT}
+    osascript <<EOF
+tell application "TextEdit"
+activate
+display  dialog "
+
+User's ${USER_NAME} password saved to the file ${OUTPUT}. Before continuing please print out the file on the next print dialog.
+
+Keep printout in the safe place.
+
+" buttons "OK" default button 1 with icon caution
+
+print "${OUTPUT}" print dialog "true"
+end tell
+
+EOF
+
+ }
 
 change_user_password(){
     echo "You password policies will be modified. To avoid password lock please change your password now."
@@ -198,7 +232,7 @@ PASSWORD=$(random_password)
 test -z "${PASSWORD}" && { echo "Something wrong. Empty password."; exit 2; }
 
 save_password
-
+exit
 make_admin_user ${USER_NAME} ${PASSWORD}
 
 change_user_password
