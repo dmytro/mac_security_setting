@@ -17,17 +17,37 @@ set -e
 # 2 - could not generate password
 #
 
-# Run this at the verey begining just to make sure user has sudo
+# Run this at the very begining just to make sure user has sudo
 # permissions.
 cache_sudo() {
     cat <<EOF
+
+
+This  script will  modify several  security related  settings on  this
+computer:
+
+* Create administrator user ${USER_NAME};
+* Update your password policies:
+  - password expiration time set to 90 days;
+  - account lock after 6 failed login attempts;
+  - min password length 7 characters;
+* Configure screensaver start time (15 minutes);
+* Requrie paccword to unlock screensaver screen.
+
+After  scripts completed  do  not forget  to  print out  administrator
+password file (it will open in TextEdit for you by script).
+
+>>>
+
 This script uses sudo to create user account and to modify system setting.
 Please provide your sudo password.
 
 
 EOF
+    sudo -k
     sudo -l > /dev/null 2>&1
 }
+
 random_password() {
     ruby -r securerandom -e "puts SecureRandom.base64(15)" | tr -d "[:punct:]" 2> /dev/null
 }
@@ -50,24 +70,38 @@ echo "-- Creating admin user "
     GID=$(dscl . list groups gid | awk '$1 ~ /^staff/ {print $2}')
 
     sudo dscl . -create /Users/${TARGETUSER}
+    printf '.'
     sudo dscl . -create /Users/${TARGETUSER} UserShell /bin/bash
+    printf '.'
     sudo dscl . -create /Users/${TARGETUSER} RealName ${TARGETUSER}
+    printf '.'
 
     lastid=$(dscl . -list /Users UniqueID | awk 'BEGIN {max = 0} {if ($2>max) max=$2} END {print max}')
     newid=$((lastid+1))
 
     sudo dscl . -create /Users/${TARGETUSER} UniqueID         ${newid}
+    printf '.'
     sudo dscl . -create /Users/${TARGETUSER} PrimaryGroupID   ${GID}
+    printf '.'
     sudo dscl . -create /Users/${TARGETUSER} NFSHomeDirectory /Users/${TARGETUSER}
+    printf '.'
 
     sudo cp -a /System/Library/User\ Template/English.lproj /Users/${TARGETUSER}
+    printf '.'
     sudo chown -R ${TARGETUSER}\:staff /Users/${TARGETUSER}
+    printf '.'
     sudo chmod 701 /Users/${TARGETUSER}
+    printf '.'
     sudo dscl . -passwd /Users/${TARGETUSER} ${PASSWORD}
+    printf '.'
     sudo dscl . append /Groups/admin GroupMembership ${TARGETUSER}
+    printf '.'
 
     # Admin user should NOT expire
     sudo pwpolicy -setpolicy -u ${TARGETUSER} "maxMinutesUntilChangePassword=2147483647"
+    printf '.'
+
+    printf " OK\n"
 }
 
 # This sets global policy
@@ -75,7 +109,7 @@ set_pw_policy(){
     echo "-- Setting default password policies"
 
     sudo pwpolicy -setglobalpolicy \
-         "minChars=7 maxFailedLoginAttempts=3 requiresNumeric=1 requiresAlpha=1 usingHistory=4 maxFailedLoginAttempts=6 maxMinutesUntilChangePassword=129600"
+         "minChars=7 requiresNumeric=1 requiresAlpha=1 usingHistory=4 maxFailedLoginAttempts=6 maxMinutesUntilChangePassword=129600"
 
 }
 
@@ -140,19 +174,30 @@ EOF
     open -e --background --fresh ${OUTPUT}
 }
 
-cache_sudo
+change_user_password(){
+    echo "You password policies will be modified. To avoid password lock please change your password now."
+    passwd
+}
+######################################################################
+# START MAIN
+#
+
 guard ${USER_NAME}
+cache_sudo
 
 PASSWORD=$(random_password)
-
 test -z "${PASSWORD}" && { echo "Something wrong. Empty password."; exit 2; }
 
 save_password
-set_pw_policy
+
 make_admin_user ${USER_NAME} ${PASSWORD}
-print_out_admins
+
+change_user_password
+set_pw_policy
 screen_saver
 screen_lock
+
+print_out_admins
 print_policy
 
 printf  "\n\n\n----success----\n\n\n"
