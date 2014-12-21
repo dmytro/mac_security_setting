@@ -49,6 +49,8 @@ EOF
 
 After scripts completed do not forget to print out administrator password file (it will open in TextEdit for you by the script).
 
+Since your password policies will be changed by the script, during the execution you will be asked for a password change.
+
 >>>
 
 This script uses sudo to create user account and to modify system setting. Please provide your sudo password at the prompt below.
@@ -225,14 +227,13 @@ change_user_password(){
 # START MAIN
 #
 
-#guard ${USER_NAME}
+guard ${USER_NAME}
 cache_sudo
 
 PASSWORD=$(random_password)
 test -z "${PASSWORD}" && { echo "Something wrong. Empty password."; exit 2; }
-
 save_password
-exit
+
 make_admin_user ${USER_NAME} ${PASSWORD}
 
 change_user_password
