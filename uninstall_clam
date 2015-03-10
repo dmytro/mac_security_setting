@@ -1,0 +1,12 @@
+#!/bin/bash -x
+
+echo "This will completely uninstall CamXav. Proceed? (yes/no)"
+
+read ANS
+
+test "${ANS}" == 'yes' || { echo "Bye!"; exit 1; }
+
+sudo rm -rf /Applications/ClamXav.app/ \
+  /usr/local/clamXav \
+  ~/Library/Preferences/uk.co.markallan.clamxav* \
+  ~/Library/LaunchAgents/uk.co.markallan.clamxav.*
