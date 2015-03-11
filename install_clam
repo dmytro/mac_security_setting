@@ -15,27 +15,53 @@ SHA=edf4e44a1b58bb01cda49e9c51766c4d26620400
 DMG=/tmp/clamxav.dmg
 
 
-test -d /Applications/ClamXav.app && { echo "Please uninstall ClamXAv first"; exit 1; }
 
 USER=$(whoami)
 # Configuratipn ends here
 # --------------------------------------------
-sudo -l > /dev/null
 
-curl ${URL} -o ${DMG}
+install_clam() {
+    echo '**** Installing ClamXav ...'
+    test -d /Applications/ClamXav.app && { echo "Please uninstall ClamXAv first"; exit 1; }
+    sudo -l > /dev/null
 
-REAL_SHA=$(openssl sha1 ${DMG} |awk '{print $2}')
+    curl --progress-bar ${URL} -o ${DMG}
 
-test ${SHA} == ${REAL_SHA} || { echo "Error verifying DMG checksum"; exit 1; }
+    REAL_SHA=$(openssl sha1 ${DMG} |awk '{print $2}')
 
-DEVICE=$(hdiutil mount ${DMG} | awk '$3 ~ /Volumes/ {print $1}' 2> /dev/null)
+    test ${SHA} == ${REAL_SHA} || { echo "Error verifying DMG checksum"; exit 1; }
 
-sudo cp -R "/Volumes/ClamXav/ClamXav.app" /Applications
+    DEVICE=$(hdiutil mount ${DMG} | awk '$3 ~ /Volumes/ {print $1}' 2> /dev/null)
 
-hdiutil detach ${DEVICE}
+    sudo cp -R "/Volumes/ClamXav/ClamXav.app" /Applications
 
-open /Applications/ClamXav.app &
+    hdiutil detach ${DEVICE} > /dev/null 2>&1
 
+}
+
+run_clam () {
+    echo '**** Launching ClamXav ...'
+    osascript <<EOF > /dev/null 2>&1
+    tell application "System Events" to display alert  "ClamXav Installation" message "After installing ClamXav you will be asked to install configuration" as critical  buttons "OK" default button 1
+EOF
+    open -W /Applications/ClamXav.app
+
+    osascript <<EOF > /dev/null 2>&1
+    with timeout of 3600 seconds
+      tell application "System Events"
+
+       display alert  "Install Configuration" message "After ClamXav finishes installing engine, and downloading virus updates, click on 'Continue'. Please do not click earlier." as critical  buttons { "Continue", "Cancel"} default button 1 cancel button 2
+       end tell
+     end timeout
+EOF
+
+    if [ $? != 0 ]; then
+        exit 1
+    fi
+}
+
+create_sentry_plict() {
+    echo '**** Creating Sentry plist ...'
 cat <<EOF > ~/Library/LaunchAgents/uk.co.markallan.clamxav.sentry.plist
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -68,7 +94,10 @@ cat <<EOF > ~/Library/LaunchAgents/uk.co.markallan.clamxav.sentry.plist
 </dict>
 </plist>
 EOF
+}
 
+create_freshclam_plist(){
+    echo '**** Creating Freshclam plist ...'
 cat <<EOF > ~/Library/LaunchAgents/uk.co.markallan.clamxav.freshclam.plist
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -98,10 +127,23 @@ cat <<EOF > ~/Library/LaunchAgents/uk.co.markallan.clamxav.freshclam.plist
 </plist>
 
 EOF
+}
 
-for i in uk.co.markallan.clamxav.freshclam.plist uk.co.markallan.clamxav.sentry.plist; do
+launch_agents(){
+    for i in uk.co.markallan.clamxav.freshclam.plist uk.co.markallan.clamxav.sentry.plist; do
 
-    sudo chown root:staff ~/Library/LaunchAgents/$i
-    sudo chmod 644 ~/Library/LaunchAgents/$i
-    sudo launchctl load ~/Library/LaunchAgents/$i
-done
+        sudo chown root:staff ~/Library/LaunchAgents/$i
+        sudo chmod 644 ~/Library/LaunchAgents/$i
+        sudo launchctl load ~/Library/LaunchAgents/$i
+
+    done
+}
+
+# --------------------------------------------
+# MAIN
+# --------------------------------------------
+install_clam
+run_clam
+create_freshclam_plist
+create_sentry_plict
+launch_agents
