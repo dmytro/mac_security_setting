@@ -1,0 +1,17 @@
+#!/bin/bash
+
+echo "This will uninstall ClamXav from your system. Proceed? (yes/no)"
+
+read ANS
+
+test "${ANS}" == 'yes' || { echo "Bye!"; exit 1; }
+
+sudo launchctl unload ~/Library/LaunchAgents/uk.co.markallan.clamxav.freshclam.plist 2> /dev/null
+sudo launchctl unload ~/Library/LaunchAgents/uk.co.markallan.clamxav.sentry.plist 2> /dev/null
+
+sudo rm -rf /Applications/ClamXav.app/ \
+  /usr/local/clamXav \
+  ~/Library/Preferences/uk.co.markallan.clamxav* \
+  ~/Library/LaunchAgents/uk.co.markallan.clamxav.*
+
+echo "All gone..."
